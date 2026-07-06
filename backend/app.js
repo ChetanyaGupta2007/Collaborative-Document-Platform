@@ -12,8 +12,9 @@ const server= http.createServer(app);
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
-app.use('/api', router);
 app.use(cors(corsOptions));
+app.use('/api', router);
+
 
 app.get('/', (req, res)=>{
     res.send('Hello World');
