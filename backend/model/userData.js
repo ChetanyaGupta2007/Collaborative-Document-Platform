@@ -4,7 +4,7 @@ const userDataSchema = new mongoose.Schema({
     username : { type: String, required: true },
     email : { type : String, required : true ,   unique : true},
     password : { type : String, required : true },
-    firstLogin : { type : Boolean, default : true },
+    RefreshToken : { type : String, default : null }
 })
 const UserData = mongoose.model('UserData', userDataSchema);
 module.exports = UserData;

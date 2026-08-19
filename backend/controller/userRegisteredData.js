@@ -1,13 +1,20 @@
 // userController.js
 const UserData = require('../model/userData');
+const bcrypt = require('bcrypt')
+const saltRounds = 10;
+async function bcrypthashing(password){
+  const hash = await bcrypt.hash(password, saltRounds);
+  return hash
+
+};
 async function StoreRegisteredUserData(req, res) {
   try {
     // Your database logic goes here
-    
+    const hashedPassword = await bcrypthashing(req.body.password);
     const newUser = new UserData({
         username: req.body.username,
         email: req.body.email,
-        password: req.body.password
+        password: hashedPassword
     });
     await newUser.save();
     console.log("User data stored successfully");
