@@ -1,11 +1,25 @@
-import { useState } from 'react';
+import { useState ,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import fetchwithAuth from '../src/api/fetchwithAuth';
+
 
 export default function Login(){
+    
         const [username, setUsername] = useState('');
         const [email, setEmail] = useState('');
         const [password, setPassword] = useState('');
         const navigate = useNavigate();
+
+        useEffect(() => {
+            async function checkSession() {
+                const res = await fetchwithAuth('http://localhost:4000/api/accessToken', { method: 'POST' });
+                if (res.ok) {
+                    navigate('/dashboard');
+                }
+            }
+            checkSession();
+        }, []);
+
         
     
         const handleInputChangeUsername = (e) => {
@@ -27,7 +41,7 @@ export default function Login(){
                     method : 'POST',
                     headers : {
                         'Content-Type' : 'application/json'
-                    },
+                    }, 
                     body : JSON.stringify({username,email,password})
                 })
                 const serverResponse = await responseLogin.json();
