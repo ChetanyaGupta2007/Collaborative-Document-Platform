@@ -5,7 +5,7 @@ const {StoreRegisteredUserData}= require('../controller/userRegisteredData');
 const {checkData}= require('../auth/authentication');
 const {authmiddleware}= require('../middleware/authmiddleware');
 const {refreshToken}= require('../auth/refreshToken');
-const {getMe}= require('../controller/getMe');
+const {getMe}= require('../controller/me');
 const {Logout} = require('../controller/Logout');
 
 router.route('/').get(getMethod).post(postMethod).put(putMethod).delete(deleteMethod);

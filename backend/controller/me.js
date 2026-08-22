@@ -1,4 +1,5 @@
+// controller/getMe.js
 function getMe(req, res) {
-  res.json({ user: req.user });
+  res.json({ id: req.userId });
 }
 module.exports = { getMe };

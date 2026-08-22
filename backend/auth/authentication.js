@@ -34,11 +34,12 @@ async function checkData(req, res) {
         if (!checking) {
          return res.status(401).json({ message: "Invalid password" });
         }
-        const user= verifiedUser.username;
-        
-        const accessToken = jwt.sign({ user }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
-        const refreshToken = jwt.sign({ user }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+        const id = verifiedUser._id;
+        console.log("before access token and refreshtoken")
+        const accessToken = jwt.sign({ id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+        const refreshToken = jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
         await UserData.updateOne({ _id: verifiedUser._id }, { $set: { RefreshToken: refreshToken } });
+        console.log("userdata refershtoken sent")
         res.json({ accessToken, refreshToken, accessGrant: true });
 
         }

@@ -19,16 +19,17 @@ export default async function fetchwithAuth(url, options = {}) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(refreshToken)
+        body: JSON.stringify({ refreshToken })
     });
 
-    if (!responseRefresh.ok) {
-        // refresh token is also invalid/expired — can't recover, force real login
-        localStorage.removeItem('existingAccessToken');
-        localStorage.removeItem('existingRefreshToken');
+   if (!responseRefresh.ok) {
+    localStorage.removeItem('existingAccessToken');
+    localStorage.removeItem('existingRefreshToken');
+    if (window.location.pathname !== '/login') {
         window.location.href = '/login';
-        return; // stop here, nothing left to return to the caller
     }
+    return;
+}
 
     const refreshResponseServer = await responseRefresh.json();
 

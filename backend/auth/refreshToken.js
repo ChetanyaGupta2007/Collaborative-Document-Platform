@@ -12,14 +12,14 @@ async function refreshToken(req, res) {
         if (err) {
             return res.status(403).json({ message: "Invalid refresh token" });
         }
-        const user = decoded.user;
-        const userData = await UserData.findOne({ username: user });
+        const userId = decoded.id;
+        const userData = await UserData.findOne({ _id : userId});
 
         if (!userData || userData.RefreshToken !== refreshTokenFromClient) {
             return res.status(403).json({ message: "Invalid refresh token, user must login again" });
         }
 
-        const accessToken = jwt.sign({ user: decoded.user }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+        const accessToken = jwt.sign({ id: userId }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
         res.json({ accessToken });
     });
 }

@@ -10,7 +10,7 @@ function authmiddleware(req, res, next) {
                         if (err){
                                 return res.status(401).json({ message: "Invalid access token" });
                         }
-                        req.user = decoded;
+                        req.userId = decoded.id;
                         next();
                 });
  
