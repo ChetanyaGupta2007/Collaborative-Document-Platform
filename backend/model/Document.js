@@ -7,10 +7,10 @@ const DocumentSchema = new mongoose.Schema({
         default: 'untitled document'
     },
 
-    content: {
-        type: String,
-        default: ""
-    },
+   content: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+},
 
     owner: {
         type: mongoose.Schema.Types.ObjectId,
