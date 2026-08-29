@@ -38,7 +38,7 @@ export default function SpecificDoc() {
 
             Timeout.current = setTimeout(() => {
                 const content = editor.getJSON();
-                socketRef.current.emit('send_changes', { id, content });
+                socketRef.current?.emit('send_changes', { id, content });
             }, 300);
         },
 
@@ -112,12 +112,15 @@ export default function SpecificDoc() {
         GetDocument();
     }, [id]);
 
-    useEffect(() => {
-        if (editor && documentContent !== null) {
-            editor.commands.setContent(documentContent);
-            // CHANGE 2: editorRef.current = editor; removed from here — now owned solely by the effect above
-        }
-    }, [editor, documentContent]);
+            useEffect(() => {
+            if (editor && documentContent !== null) {
+                isApplyingRemote.current = true;
+
+                editor.commands.setContent(documentContent);
+
+                isApplyingRemote.current = false;
+            }
+        }, [editor, documentContent]);
 
     async function SendNewElements(id) {
         const content = editor.getJSON();
