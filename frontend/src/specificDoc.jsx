@@ -6,7 +6,7 @@ import fetchwithAuth from '../src/api/fetchwithAuth';
 import { io } from 'socket.io-client';
 
 export default function SpecificDoc() {
-
+    const accessToken = localStorage.getItem('existingAccessToken');
     const [title, settitle] = useState("");
     const [documentContent, setDocumentContent] = useState(null);
 
@@ -58,7 +58,7 @@ export default function SpecificDoc() {
     }, [editor]);
 
     useEffect(() => {
-        const socket = io("http://localhost:4000");
+        const socket = io("http://localhost:4000",{ auth: { token: accessToken } });
         socketRef.current = socket;
 
         async function checkSession() {
@@ -84,6 +84,9 @@ export default function SpecificDoc() {
                 isApplyingRemote.current = false;
             }
         });
+        socket.on("error", (data) => {
+    console.log(data.message);
+});
 
         return () => {
             socket.emit("leave_document", { id });
