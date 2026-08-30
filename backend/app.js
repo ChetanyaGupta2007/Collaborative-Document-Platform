@@ -9,10 +9,12 @@ const connectDB = require('./db/connect');
 const corsOptions = require('./config/corsOptions');
 const router = require('./router/routes');
 const jwt = require('jsonwebtoken');
-const Document = require('../model/Document');
+const Document = require('./model/Document');
+const UserData = require('./model/userData');
 
 const server= http.createServer(app);
 const io = new Server(server, { cors: { origin: 'http://localhost:5173' } });
+const documentPresence = {};
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -37,18 +39,45 @@ io.use((socket,next) =>{
 })
 io.on('connection',(socket)=>{
     socket.on('join_document' , async (data)=>{
+        
         const check = await Document.findById(data.id);
         if(check.owner.toString() !== socket.data.userId){
             console.log("wrong owner asking for doc");
             socket.emit("error", {
-    message: "Wrong owner"
-});return
+            message: "Wrong owner"
+        });
+            return;
         }
+        socket.data.currentDocId = data.id;
         socket.join(data.id);
         console.log(`socket ${socket.id} joined document ${data.id}`);
         const number = io.sockets.adapter.rooms.get(data.id)
         console.log(`${number?.size} people`);
+        const result = await UserData.findById(socket.data.userId);
+        
+        if (!documentPresence[data.id]) {
+ documentPresence[data.id] = {};
+}
+
+
+    documentPresence[data.id][socket.id] = result.username;
+    socket.data.username = result.username;
+        socket.to(data.id).emit('user_joined', { username: result.username });
+        socket.emit('current_viewers', {usernames : Object.values(documentPresence[data.id])});
+
+
         })
+        socket.on('typing', (data) => {
+    if (!socket.rooms.has(data.id)) {
+        return;
+    }
+
+    socket.to(data.id).emit('typing', {
+        username: socket.data.username
+    });
+});
+
+
     socket.on('send_changes' ,(data)=>{
         console.log('changes received');
         if (!socket.rooms.has(data.id)) {
@@ -59,7 +88,20 @@ io.on('connection',(socket)=>{
     }
         
         socket.to(data.id).emit('receive_messages',data.content);
-    });   
+    }); 
+    socket.on('disconnect', () => {
+    const docId = socket.data.currentDocId;
+
+    if (docId && documentPresence[docId]) {
+        const username = documentPresence[docId][socket.id];
+
+        delete documentPresence[docId][socket.id];
+
+        socket.to(docId).emit('user_left', {
+            username: username
+        });
+    }
+});
     socket.on('leave_document', (data) => {
         socket.leave(data.id);
         console.log(`socket ${socket.id} left document ${data.id}`);

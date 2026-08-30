@@ -9,7 +9,7 @@ export default function SpecificDoc() {
     const accessToken = localStorage.getItem('existingAccessToken');
     const [title, settitle] = useState("");
     const [documentContent, setDocumentContent] = useState(null);
-
+    const [usersonline,setusersonline]= useState([]);
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -20,6 +20,8 @@ export default function SpecificDoc() {
     const pendingUpdateRef = useRef(null);
     const isApplyingRemote = useRef(false);
     const editorRef = useRef(null);
+    const [typingUser, setTypingUser] = useState(null);
+    const typingTimeoutRef = useRef(null);
 
     const editor = useEditor({
         extensions: [StarterKit],
@@ -33,6 +35,7 @@ export default function SpecificDoc() {
             forceRerender(n => n + 1);
 
             if (isApplyingRemote.current) return;
+            socketRef.current?.emit('typing', { id });
 
             clearTimeout(Timeout.current);
 
@@ -73,7 +76,27 @@ export default function SpecificDoc() {
         checkSession();
 
         socket.emit('join_document', { id });
+        socket.on('user_joined',(data) => {
+            alert(`${data.username} joined`)
+            setusersonline(prev => [...prev, data.username]);
+        })
+        socket.on('current_viewers' ,(data) => {
+            setusersonline(data.usernames);
 
+        })
+        socket.on('typing', (data) => {
+            setTypingUser(data.username);
+
+            clearTimeout(typingTimeoutRef.current);
+
+            typingTimeoutRef.current = setTimeout(() => {
+                setTypingUser(null);
+            }, 2000);
+        });
+
+        socket.on('user_left', (data) => {
+    setusersonline(prev => prev.filter(name => name !== data.username));
+});
         socket.on('receive_messages', (data) => {
             // CHANGE 3: optional chaining added on every editorRef.current access
             if (editorRef.current?.isFocused) {
@@ -168,5 +191,13 @@ export default function SpecificDoc() {
         )}
         <button onClick={() => { SendNewElements(id); }}>Save</button>
         <button onClick={() => { DeleteDoc(id); }}>Delete</button>
+        <ul style={{color : "black"}}> 
+            {usersonline.map((users) => (
+                <li key={users}>{users}</li>
+            ))}
+            </ul>
+        {typingUser && (
+    <p>{typingUser} is typing...</p>
+)}    
     </>;
 }
