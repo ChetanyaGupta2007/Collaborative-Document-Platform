@@ -22,6 +22,25 @@ export default function SpecificDoc() {
     const editorRef = useRef(null);
     const [typingUser, setTypingUser] = useState(null);
     const typingTimeoutRef = useRef(null);
+    const [email, setEmail] = useState('');
+    const handleInputChangeEmail = (e) => {
+          setEmail(e.target.value);
+        };
+    const [role, setRole] = useState("");
+    const handleSubmit = async (e) => {
+            e.preventDefault();
+            console.log("share request")
+            const responseAccess = await fetchwithAuth('http://localhost:4000/api/document/collaborator', {
+                    method : 'POST',
+                    headers : {
+                        'Content-Type' : 'application/json'
+                    }, 
+                    body : JSON.stringify({email,role,id})
+                })
+            if(responseAccess.ok){
+                console.log("Shared To another user")
+            }    
+            }
 
     const editor = useEditor({
         extensions: [StarterKit],
@@ -78,7 +97,9 @@ export default function SpecificDoc() {
         socket.emit('join_document', { id });
         socket.on('user_joined',(data) => {
             alert(`${data.username} joined`)
-            setusersonline(prev => [...prev, data.username]);
+            setusersonline(prev =>
+    prev.includes(data.username) ? prev : [...prev, data.username]
+);
         })
         socket.on('current_viewers' ,(data) => {
             setusersonline(data.usernames);
@@ -175,6 +196,7 @@ export default function SpecificDoc() {
             navigate('/dashboard');
         }
     }
+    
 
     return <>
         <h1>YOUR DOCUMENT</h1>
@@ -198,6 +220,20 @@ export default function SpecificDoc() {
             </ul>
         {typingUser && (
     <p>{typingUser} is typing...</p>
+    
 )}    
+    <div>
+        <br /> <h1> SHARE </h1>
+    <form onSubmit={handleSubmit}>
+    <input type = "text" placeholder="email" value={email} onChange={handleInputChangeEmail} required></input>
+    <select name="role" id="role" onChange={(e)=>{setRole(e.target.value)}}>
+        <option value="viewer">Viewer</option>
+        <option value="editor">editor</option>
+    </select>
+    <button type="submit">Share</button>
+    
+    </form>
+
+    </div>
     </>;
 }
