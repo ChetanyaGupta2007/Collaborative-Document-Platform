@@ -117,7 +117,11 @@ export default function SpecificDoc() {
 
         socket.on('user_left', (data) => {
     setusersonline(prev => prev.filter(name => name !== data.username));
-});
+});     socket.on('version-restored', (data) => {
+        isApplyingRemote.current = true;
+                editorRef.current?.commands.setContent(data);
+                isApplyingRemote.current = false;
+})
         socket.on('receive_messages', (data) => {
             // CHANGE 3: optional chaining added on every editorRef.current access
             if (editorRef.current?.isFocused) {
@@ -212,6 +216,7 @@ export default function SpecificDoc() {
             </div>
         )}
         <button onClick={() => { SendNewElements(id); }}>Save</button>
+        <button onClick={() => { navigate(`/version/${id}`); }}>View Versions</button>
         <button onClick={() => { DeleteDoc(id); }}>Delete</button>
         <ul style={{color : "black"}}> 
             {usersonline.map((users) => (
@@ -231,6 +236,7 @@ export default function SpecificDoc() {
         <option value="editor">editor</option>
     </select>
     <button type="submit">Share</button>
+
     
     </form>
 

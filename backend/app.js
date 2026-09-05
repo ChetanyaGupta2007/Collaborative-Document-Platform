@@ -1,7 +1,7 @@
 require('dotenv').config();
 const cors = require('cors')
 const http = require('http');
-const {Server} = require('socket.io')
+const { initIO } = require('./socket/io');
 const express = require('express');
 const app = express();
 const mongoose = require('mongoose');
@@ -13,8 +13,13 @@ const Document = require('./model/Document');
 const UserData = require('./model/userData');
 const {HasDocumentAccess}= require('./auth/DocumentAccess');
 
+
 const server= http.createServer(app);
-const io = new Server(server, { cors: { origin: 'http://localhost:5173' } });
+const io = initIO(server, {
+    cors: {
+        origin: 'http://localhost:5173'
+    }
+});
 const documentPresence = {};
 
 app.use(express.json());
@@ -106,6 +111,7 @@ io.on('connection',(socket)=>{
         
         socket.to(data.id).emit('receive_messages',data.content);
     }); 
+    
     socket.on('disconnect', () => {
     const docId = socket.data.currentDocId;
 

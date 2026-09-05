@@ -3,6 +3,7 @@ import Login from './login.jsx'
 import Dashboard from './Dashboard.jsx'
 import { Routes, Route } from 'react-router-dom'
 import SpecificDoc from './specificDoc.jsx'
+import VersionHistory from './VersionHistory.jsx'
 
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/document/:id" element={<SpecificDoc />}></Route>
+        <Route path="/version/:id" element={<VersionHistory />}></Route>
       </Routes>
     )
 }
