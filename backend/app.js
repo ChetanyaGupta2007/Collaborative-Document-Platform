@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const Document = require('./model/Document');
 const UserData = require('./model/userData');
 const {HasDocumentAccess}= require('./auth/DocumentAccess');
+const PORT = process.env.PORT || 4000;
 
 
 const server= http.createServer(app);
@@ -20,7 +21,6 @@ const io = initIO(server, {
         origin: 'http://localhost:5173'
     }
 });
-const documentPresence = {};
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -31,6 +31,38 @@ app.use('/api', router);
 app.get('/', (req, res)=>{
     res.send('Hello World');
 });
+
+const {createAdapter} = require('@socket.io/redis-adapter');
+const { createClient}= require('redis');
+const pubClient = createClient({url: "redis://localhost:6379"});
+const subClient = pubClient.duplicate();
+const redisClient = pubClient.duplicate();
+pubClient.on('error', (err) => {
+  console.error('Redis Pub Client Error:', err);
+});
+
+subClient.on('error', (err) => {
+  console.error('Redis Sub Client Error:', err);
+});
+redisClient.on('error', (err) => {
+    console.error('Redis Client Error:', err);
+});
+async function connectRedis() {
+  try {
+    await Promise.all([
+      pubClient.connect(),
+      subClient.connect(),
+      redisClient.connect()
+
+    ]);
+    console.log('Connected to Redis server');
+    io.adapter(createAdapter(pubClient, subClient));
+  } catch (err) {
+    console.error('Error connecting to Redis server:', err);
+    throw err;
+  }
+}
+
 io.use((socket,next) =>{
     const token = socket.handshake.auth.token;
     try{
@@ -65,18 +97,18 @@ io.on('connection',(socket)=>{
         const number = io.sockets.adapter.rooms.get(data.id)
         console.log(`${number?.size} people`);
         const result = await UserData.findById(socket.data.userId);
+        const users = await redisClient.hGetAll(`documentPresence:${data.id}`);
         
-        if (!documentPresence[data.id]) {
- documentPresence[data.id] = {};
-}
+        
 
-
-    documentPresence[data.id][socket.id] = result.username;
-    socket.data.username = result.username;
+    await redisClient.hSet(
+    `documentPresence:${data.id}`,
+    socket.id,
+    result.username
+);
+   
         socket.to(data.id).emit('user_joined', { username: result.username });
-        socket.emit('current_viewers', {usernames : Object.values(documentPresence[data.id])});
-
-
+        socket.emit('current_viewers', {usernames : Object.values(users)});
         })
         socket.on('typing', (data) => {
     if (!socket.rooms.has(data.id)) {
@@ -112,13 +144,20 @@ io.on('connection',(socket)=>{
         socket.to(data.id).emit('receive_messages',data.content);
     }); 
     
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
     const docId = socket.data.currentDocId;
+        const users = await redisClient.hGetAll(`documentPresence:${docId}`);
 
-    if (docId && documentPresence[docId]) {
-        const username = documentPresence[docId][socket.id];
-
-        delete documentPresence[docId][socket.id];
+    if (docId && users[socket.id]) {
+        const username = await redisClient.hGet(
+    `documentPresence:${docId}`,
+    socket.id
+);
+        
+    await redisClient.hDel(
+        `documentPresence:${docId}`,
+        socket.id
+    );
 
         socket.to(docId).emit('user_left', {
             username: username
@@ -138,9 +177,10 @@ const start = async () => {
         try{        
                 await connectDB(process.env.URL)
                 console.log('Connected to MongoDB');
-                server.listen(4000, ()=>{ 
-                    console.log('Servers is running on port 4000');
-    })
+                await connectRedis();
+                server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
     }
 catch (err){
     console.log(err);

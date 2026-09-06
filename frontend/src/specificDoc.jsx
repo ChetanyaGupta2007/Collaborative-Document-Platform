@@ -80,7 +80,11 @@ export default function SpecificDoc() {
     }, [editor]);
 
     useEffect(() => {
-        const socket = io("http://localhost:4000",{ auth: { token: accessToken } });
+        const backendURL =
+    window.location.port === "5174"
+        ? "http://localhost:4001"
+        : "http://localhost:4000";
+        const socket = io(backendURL, { auth: { token: accessToken } });
         socketRef.current = socket;
 
         async function checkSession() {
