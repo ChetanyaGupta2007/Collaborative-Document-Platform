@@ -18,7 +18,10 @@ const PORT = process.env.PORT || 4000;
 const server= http.createServer(app);
 const io = initIO(server, {
     cors: {
-        origin: 'http://localhost:5173'
+        origin: [
+            "http://localhost:5173",
+            "http://localhost:5174"
+        ]
     }
 });
 
