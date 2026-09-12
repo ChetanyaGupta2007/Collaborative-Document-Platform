@@ -4,7 +4,7 @@ async function getVersionHistory(req, res) {
     try {
         const versions = await DocumentVersion
             .find({ document: req.params.id })
-            .select("version createdBy createdAt -content")
+            .select("version createdBy createdAt")
             .sort({ version: -1 });
         res.status(200).json(versions);
     } catch (error) {

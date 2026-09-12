@@ -1,6 +1,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 
+import * as Y from 'yjs';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -8,16 +9,17 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
 import fetchwithAuth from '../src/api/fetchwithAuth';
+import Collaboration from '@tiptap/extension-collaboration';
 
 import { io } from 'socket.io-client';
-
+const INCOMING_UPDATE = "incoming";
 export default function SpecificDoc() {
 
     const accessToken = localStorage.getItem('existingAccessToken');
 
     const [title, settitle] = useState("");
 
-    const [documentContent, setDocumentContent] = useState(null);
+    
 
     const [usersonline, setusersonline] = useState([]);
 
@@ -29,21 +31,18 @@ export default function SpecificDoc() {
 
     const socketRef = useRef(null);
 
-    const Timeout = useRef(null);
 
-    const pendingUpdateRef = useRef(null);
 
-    const isApplyingRemote = useRef(false);
+    const isRemoteTransaction = useRef(false);
 
     const editorRef = useRef(null);
 
     const [typingUser, setTypingUser] = useState(null);
 
     const typingTimeoutRef = useRef(null);
-    const isInitialLoadComplete = useRef(false);
 
     const [email, setEmail] = useState('');
-
+    const [ydoc] = useState(() => new Y.Doc());
     const handleInputChangeEmail = (e) => {
         setEmail(e.target.value);
     };
@@ -72,9 +71,10 @@ export default function SpecificDoc() {
     };
 
     const editor = useEditor({
-        extensions: [StarterKit],
+        extensions: [StarterKit.configure({
+            history: false,
+        }), Collaboration.configure({document: ydoc})],
 
-        content: "",
 
         onSelectionUpdate: () => {
             forceRerender(n => n + 1);
@@ -83,38 +83,14 @@ export default function SpecificDoc() {
         onTransaction: () => {
             forceRerender(n => n + 1);
 
-            if (isApplyingRemote.current) return;
+            if (isRemoteTransaction.current) return;
              // Don't treat initialization/early local changes as edits
         // until the real document has been loaded into the editor.
-            if (!isInitialLoadComplete.current) return;
             socketRef.current?.emit('typing', { id });
-
-            clearTimeout(Timeout.current);
-
-            Timeout.current = setTimeout(() => {
-                const content = editor.getJSON();
-
-                socketRef.current?.emit('send_changes', {
-                    id,
-                    content
-                });
-            }, 300);
         },
 
-        onBlur: () => {
-            if (pendingUpdateRef.current) {
-
-                isApplyingRemote.current = true;
-
-                editor.commands.setContent(
-                    pendingUpdateRef.current
-                );
-
-                isApplyingRemote.current = false;
-
-                pendingUpdateRef.current = null;
-            }
-        },
+            
+        
     });
 
     // editorRef always mirrors editor
@@ -162,7 +138,21 @@ export default function SpecificDoc() {
 
 
         // JOIN DOCUMENT
-        socket.emit('join_document', { id });
+        socket.emit('join_document', { id },(response)=> {
+            if(!response.ok){
+                console.log(response.error);
+                return navigate('/dashboard');
+            }
+            isRemoteTransaction.current = true;
+
+            Y.applyUpdate(
+                ydoc,
+                response.data,
+                INCOMING_UPDATE
+            );
+
+            isRemoteTransaction.current = false;
+        });
 
 
         // USER JOINED
@@ -198,6 +188,17 @@ export default function SpecificDoc() {
             }, 2000);
         });
 
+        socket.on('yjs-update', (update) => {
+            // Handle yjs-update event
+            isRemoteTransaction.current = true ; 
+            Y.applyUpdate(ydoc, update, INCOMING_UPDATE) ; 
+            isRemoteTransaction.current = false;
+        });
+        ydoc.on("update", (update, origin) => {
+    // send update through Socket.IO
+    if (origin === INCOMING_UPDATE) return; 
+    socketRef.current?.emit('yjs-update', update); 
+});
 
         // USER LEFT
         socket.on('user_left', (data) => {
@@ -211,30 +212,20 @@ export default function SpecificDoc() {
         // VERSION RESTORED
         socket.on('version-restored', (data) => {
 
-            isApplyingRemote.current = true;
+            isRemoteTransaction.current = true;
 
-            editorRef.current?.commands.setContent(data);
+             Y.applyUpdate(
+                ydoc,
+                data.update,
+                INCOMING_UPDATE
+            );
 
-            isApplyingRemote.current = false;
+            isRemoteTransaction.current = false;
         });
 
 
         // RECEIVE CHANGES
-        socket.on('receive_messages', (data) => {
-
-            if (editorRef.current?.isFocused) {
-
-                pendingUpdateRef.current = data;
-
-            } else {
-
-                isApplyingRemote.current = true;
-
-                editorRef.current?.commands.setContent(data);
-
-                isApplyingRemote.current = false;
-            }
-        });
+        
 
 
         // SOCKET ERROR
@@ -257,7 +248,6 @@ export default function SpecificDoc() {
 
     // GET DOCUMENT
     useEffect(() => {
-        isInitialLoadComplete.current = false;
         async function GetDocument() {
 
             const response = await fetchwithAuth(
@@ -276,7 +266,7 @@ export default function SpecificDoc() {
 
                 settitle(data.doc.title);
 
-                setDocumentContent(data.doc.content);
+                
             }
 
             if (response.status === 404) {
@@ -292,19 +282,7 @@ export default function SpecificDoc() {
     }, [id]);
 
 
-    // SET EDITOR CONTENT AFTER FETCH
-    useEffect(() => {
-
-        if (editor && documentContent !== null) {
-
-            isApplyingRemote.current = true;
-
-            editor.commands.setContent(documentContent);
-            isInitialLoadComplete.current = true;
-            isApplyingRemote.current = false;
-        }
-
-    }, [editor, documentContent]);
+    
 
 
     // SAVE DOCUMENT
@@ -353,13 +331,8 @@ export default function SpecificDoc() {
 
             settitle("");
 
-            setDocumentContent(null);
 
-            if (editor) {
-
-                editor.commands.setContent("");
-
-            }
+            
 
             navigate('/dashboard');
         }

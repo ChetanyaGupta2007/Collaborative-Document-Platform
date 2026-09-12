@@ -1,6 +1,7 @@
 require('dotenv').config();
 const cors = require('cors')
 const http = require('http');
+const Y = require('yjs')
 const { initIO } = require('./socket/io');
 const express = require('express');
 const app = express();
@@ -11,7 +12,15 @@ const router = require('./router/routes');
 const jwt = require('jsonwebtoken');
 const Document = require('./model/Document');
 const UserData = require('./model/userData');
-const {HasDocumentAccess}= require('./auth/DocumentAccess');
+const {hasDocumentAccess}= require('./auth/DocumentAccess');
+const {getDoc,setDoc, deleteDoc,hasDoc} = require("./socket/yjsDocMap");
+const { seedYDocFromTipTap } = require("./utils/yjsSeed");
+const { persistYjsUpdate } = require("./utils/persistYjsUpdate");
+const { reconstructYDoc } = require("./utils/reconstructYDoc");
+const {
+    startSnapshotTimer,
+    stopSnapshotTimer
+} = require("./utils/snapshotTimer");
 const PORT = process.env.PORT || 4000;
 
 
@@ -79,29 +88,72 @@ io.use((socket,next) =>{
     }
 })
 io.on('connection',(socket)=>{
-    socket.on('join_document' , async (data)=>{
+    socket.on('join_document' , async (data,callback)=>{
         
         
-    const allowed = await HasDocumentAccess(
+    const allowed = await hasDocumentAccess(
         socket.data.userId,
         data.id,
-        "viewer"
+        
     );
 
-    if (!allowed) {
-        socket.emit("error", {
-            message: "You don't have access to this document"
-        });
+    if (allowed=== null) {
+        callback({
+    ok: false,
+    error: "You do not have access to this document"
+});
         return;
-    }
+    }   
+        let ydoc;
+        if (hasDoc(data.id)) {
+    ydoc = getDoc(data.id);
+} else {
+        const document = await Document.findById(data.id);
+        if (!document) {
+            callback({
+                ok: false,
+                error: "Document not found"
+            });
+            return;
+        }
+        // Reconstruct the Y.Doc from snapshot + persisted updates.
+        // Document existence/authorization is already handled above.
+        ydoc = await reconstructYDoc(
+            data.id,
+            document.content
+        );
+        try {
+            setDoc(data.id, ydoc);
+
+            startSnapshotTimer(
+                data.id,
+                ydoc
+            );
+        } catch (err) {
+            const existingYDoc = getDoc(data.id);
+
+            if (!existingYDoc) {
+                throw err;
+            }
+
+            ydoc = existingYDoc;
+        }       }
+        socket.data.documentRole = allowed;
         socket.data.currentDocId = data.id;
         socket.join(data.id);
+        const bootstrapUpdate = Y.encodeStateAsUpdate(ydoc);
+        callback({
+            ok: true,
+            data: bootstrapUpdate
+        });
+
+        
         console.log(`socket ${socket.id} joined document ${data.id}`);
         const number = io.sockets.adapter.rooms.get(data.id)
         console.log(`${number?.size} people`);
         const result = await UserData.findById(socket.data.userId);
         const users = await redisClient.hGetAll(`documentPresence:${data.id}`);
-        
+        socket.data.username = result.username;
         
 
     await redisClient.hSet(
@@ -124,29 +176,26 @@ io.on('connection',(socket)=>{
 });
 
 
-    socket.on('send_changes' ,async (data)=>{
-        console.log('changes received');
-        const allowed = await HasDocumentAccess(
-        socket.data.userId,
-        data.id,
-        "editor"
-    );
-
-    if (!allowed) {
-        socket.emit("error", {
-            message: "You need editor permission"
-        });
-        return;}
-        if (!socket.rooms.has(data.id)) {
-        socket.emit("error", {
-            message: "You have not joined this document"
-        });
-        return;
-    }
-        
-        socket.to(data.id).emit('receive_messages',data.content);
-    }); 
     
+    socket.on('yjs-update', (update) => {
+        const docId = socket.data.currentDocId;
+        if (!docId) {
+            console.error('No document ID found for socket');
+            return;
+        }
+        const documentRole = socket.data.documentRole;
+        if (documentRole !== 'editor' && documentRole !== 'owner') {
+            console.error('User does not have permission to edit the document');
+            return;
+        }
+        const ydoc = getDoc(docId);
+        if (!ydoc) {
+            console.error('No Yjs document found for ID:', docId);
+            return;
+        }
+        Y.applyUpdate(ydoc, update);
+        socket.to(docId).emit('yjs-update', update);
+        persistYjsUpdate(docId, update, ydoc);    })
     socket.on('disconnect', async () => {
     const docId = socket.data.currentDocId;
         const users = await redisClient.hGetAll(`documentPresence:${docId}`);
@@ -161,18 +210,52 @@ io.on('connection',(socket)=>{
         `documentPresence:${docId}`,
         socket.id
     );
+    const remainingUsers = await redisClient.hLen(
+    `documentPresence:${docId}`
+);
+
+if (remainingUsers === 0) {
+    deleteDoc(docId);
+    await redisClient.del(`documentPresence:${docId}`);
+}
 
         socket.to(docId).emit('user_left', {
             username: username
         });
     }
 });
-    socket.on('leave_document', (data) => {
-        socket.leave(data.id);
-        console.log(`socket ${socket.id} left document ${data.id}`);
-        const number = io.sockets.adapter.rooms.get(data.id)
-        console.log(`${number?.size} people`);
-    });    
+    socket.on('leave_document', async (data) => {
+    const docId = data.id;
+
+    socket.leave(docId);
+
+    socket.data.currentDocId = null;
+    socket.data.documentRole = null;
+
+    const username = await redisClient.hGet(
+        `documentPresence:${docId}`,
+        socket.id
+    );
+
+    await redisClient.hDel(
+        `documentPresence:${docId}`,
+        socket.id
+    );
+
+    socket.to(docId).emit('user_left', {
+        username: username
+    });
+
+    const number = io.sockets.adapter.rooms.get(docId);
+
+    console.log(`socket ${socket.id} left document ${docId}`);
+    console.log(`${number?.size} people`);
+
+    if (!number) {
+        deleteDoc(docId);
+        await redisClient.del(`documentPresence:${docId}`);
+    }
+});    
 })
 
 
