@@ -21,6 +21,8 @@ const {
     startSnapshotTimer,
     stopSnapshotTimer
 } = require("./utils/snapshotTimer");
+const { handleUserLeave } = require('./socket/handleUserLeave');
+
 const PORT = process.env.PORT || 4000;
 
 
@@ -198,64 +200,20 @@ io.on('connection',(socket)=>{
         persistYjsUpdate(docId, update, ydoc);    })
     socket.on('disconnect', async () => {
     const docId = socket.data.currentDocId;
-        const users = await redisClient.hGetAll(`documentPresence:${docId}`);
-
-    if (docId && users[socket.id]) {
-        const username = await redisClient.hGet(
-    `documentPresence:${docId}`,
-    socket.id
-);
-        
-    await redisClient.hDel(
-        `documentPresence:${docId}`,
-        socket.id
-    );
-    const remainingUsers = await redisClient.hLen(
-    `documentPresence:${docId}`
-);
-
-if (remainingUsers === 0) {
-    deleteDoc(docId);
-    await redisClient.del(`documentPresence:${docId}`);
-}
-
-        socket.to(docId).emit('user_left', {
-            username: username
-        });
-    }
+    await handleUserLeave(docId, socket, redisClient);
 });
-    socket.on('leave_document', async (data) => {
+
+socket.on('leave_document', async (data) => {
     const docId = data.id;
 
     socket.leave(docId);
-
     socket.data.currentDocId = null;
     socket.data.documentRole = null;
 
-    const username = await redisClient.hGet(
-        `documentPresence:${docId}`,
-        socket.id
-    );
-
-    await redisClient.hDel(
-        `documentPresence:${docId}`,
-        socket.id
-    );
-
-    socket.to(docId).emit('user_left', {
-        username: username
-    });
-
-    const number = io.sockets.adapter.rooms.get(docId);
-
     console.log(`socket ${socket.id} left document ${docId}`);
-    console.log(`${number?.size} people`);
 
-    if (!number) {
-        deleteDoc(docId);
-        await redisClient.del(`documentPresence:${docId}`);
-    }
-});    
+    await handleUserLeave(docId, socket, redisClient);
+});
 })
 
 
