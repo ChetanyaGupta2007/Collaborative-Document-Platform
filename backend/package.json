@@ -13,6 +13,9 @@
   "type": "commonjs",
   "dependencies": {
     "@socket.io/redis-adapter": "^8.3.0",
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "@tiptap/y-tiptap": "^3.0.9",
     "bcrypt": "^6.0.0",
     "cor": "^0.0.0",
     "cors": "^2.8.6",
