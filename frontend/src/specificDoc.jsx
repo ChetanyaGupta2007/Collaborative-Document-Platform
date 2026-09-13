@@ -13,6 +13,7 @@ import Collaboration from '@tiptap/extension-collaboration';
 
 import { io } from 'socket.io-client';
 const INCOMING_UPDATE = "incoming";
+const API_URL = import.meta.env.VITE_API_URL;
 export default function SpecificDoc() {
 
     const accessToken = localStorage.getItem('existingAccessToken');
@@ -55,7 +56,7 @@ export default function SpecificDoc() {
         console.log("share request");
 
         const responseAccess = await fetchwithAuth(
-            'http://localhost:4000/api/document/collaborator',
+            `${API_URL}/api/document/collaborator`,
             {
                 method: 'POST',
                 headers: {
@@ -105,12 +106,9 @@ export default function SpecificDoc() {
         // Frontend 5173 → Backend 4000
         // Frontend 5174 → Backend 4001
 
-        const backendURL =
-            window.location.port === "5174"
-                ? "http://localhost:4001"
-                : "http://localhost:4000";
+        
 
-        const socket = io(backendURL, {
+        const socket = io(API_URL, {
             auth: {
                 token: accessToken
             }
@@ -123,7 +121,7 @@ export default function SpecificDoc() {
         async function checkSession() {
 
             const res = await fetchwithAuth(
-                'http://localhost:4000/api/accessToken',
+                `${API_URL}/api/accessToken`,
                 {
                     method: 'POST'
                 }
@@ -251,7 +249,7 @@ export default function SpecificDoc() {
         async function GetDocument() {
 
             const response = await fetchwithAuth(
-                `http://localhost:4000/api/document/${id}`,
+                `${API_URL}/api/document/${id}`,
                 {
                     method: 'GET',
                     headers: {
@@ -291,7 +289,7 @@ export default function SpecificDoc() {
         const content = editor.getJSON();
 
         const response = await fetchwithAuth(
-            `http://localhost:4000/api/document/${id}`,
+            `${API_URL}/api/document/${id}`,
             {
                 method: 'PUT',
                 headers: {
@@ -316,7 +314,7 @@ export default function SpecificDoc() {
     async function DeleteDoc(id) {
 
         const response = await fetchwithAuth(
-            `http://localhost:4000/api/document/${id}`,
+            `${API_URL}/api/document/${id}`,
             {
                 method: 'DELETE',
                 headers: {

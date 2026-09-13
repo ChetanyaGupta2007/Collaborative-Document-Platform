@@ -30,8 +30,7 @@ const server= http.createServer(app);
 const io = initIO(server, {
     cors: {
         origin: [
-            "http://localhost:5173",
-            "http://localhost:5174"
+            process.env.CORS_ORIGIN
         ]
     }
 });
@@ -48,7 +47,7 @@ app.get('/', (req, res)=>{
 
 const {createAdapter} = require('@socket.io/redis-adapter');
 const { createClient}= require('redis');
-const pubClient = createClient({url: "redis://localhost:6379"});
+const pubClient = createClient({url: process.env.REDIS_URL});
 const subClient = pubClient.duplicate();
 const redisClient = pubClient.duplicate();
 pubClient.on('error', (err) => {
