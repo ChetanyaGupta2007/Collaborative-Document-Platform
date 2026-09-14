@@ -8,6 +8,7 @@ const app = express();
 const mongoose = require('mongoose');
 const connectDB = require('./db/connect');
 const corsOptions = require('./config/corsOptions');
+console.log("CORS_ORIGIN:", process.env.CORS_ORIGIN);
 const router = require('./router/routes');
 const jwt = require('jsonwebtoken');
 const Document = require('./model/Document');
