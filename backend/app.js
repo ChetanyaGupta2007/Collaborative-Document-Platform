@@ -34,10 +34,10 @@ const io = initIO(server, {
         ]
     }
 });
-
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
-app.use(cors(corsOptions));
+
 app.use('/api', router);
 
 
