@@ -30,12 +30,16 @@ const PORT = process.env.PORT || 4000;
 const server= http.createServer(app);
 const io = initIO(server, {
     cors: {
-        origin: [
-            process.env.CORS_ORIGIN
-        ]
+        origin: process.env.CORS_ORIGIN,
+        credentials: true
     }
 });
 app.use(cors(corsOptions));
+app.use((req, res, next) => {
+    console.log("REQUEST:", req.method, req.path);
+    console.log("ORIGIN:", req.headers.origin);
+    next();
+});
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
