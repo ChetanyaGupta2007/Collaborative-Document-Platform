@@ -1,5 +1,8 @@
+const API_URL = import.meta.env.VITE_API_URL;
 export default async function fetchwithAuth(url, options = {}) {
     const accessToken = localStorage.getItem('existingAccessToken');
+    
+
     const headers = {
         ...options.headers,
         Authorization: `Bearer ${accessToken}`
@@ -14,7 +17,7 @@ export default async function fetchwithAuth(url, options = {}) {
     // access token was expired/invalid — try to refresh
     const refreshToken = localStorage.getItem('existingRefreshToken');
 
-    const responseRefresh = await fetch('http://localhost:4000/api/Token', {
+    const responseRefresh = await fetch(`${API_URL}/api/Token`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

@@ -338,141 +338,125 @@ export default function SpecificDoc() {
 
 
     return (
-        <>
-            <h1>YOUR DOCUMENT</h1>
+        <div className="min-h-screen bg-paper">
+            {/* Top bar */}
+            <div className="sticky top-0 z-10 bg-surface border-b border-line px-6 py-3 flex items-center justify-between">
+                <input
+                    id="title"
+                    value={title}
+                    onChange={(e) => settitle(e.target.value)}
+                    placeholder="Untitled document"
+                    className="font-serif text-xl text-ink bg-transparent focus:outline-none focus:border-b focus:border-brand px-1"
+                />
 
-            <textarea
-                id="title"
-                value={title}
-                onChange={(e) => settitle(e.target.value)}
-            />
-
-            <EditorContent editor={editor} />
-
-            {editor && (
-                <div>
-
+                <div className="flex items-center gap-2">
                     <button
-                        style={{
-                            fontWeight: editor.isActive('bold')
-                                ? 'bold'
-                                : 'normal'
-                        }}
-                        onClick={() =>
-                            editor.chain().focus().toggleBold().run()
-                        }
+                        onClick={() => { SendNewElements(id); }}
+                        className="rounded-md bg-brand text-white px-4 py-1.5 text-sm font-medium hover:bg-brand-hover transition-colors"
                     >
-                        Bold
+                        Save
                     </button>
-
                     <button
-                        style={{
-                            fontStyle: editor.isActive('italic')
-                                ? 'italic'
-                                : 'normal'
-                        }}
-                        onClick={() =>
-                            editor.chain().focus().toggleItalic().run()
-                        }
+                        onClick={() => { navigate(`/version/${id}`); }}
+                        className="rounded-md border border-line px-4 py-1.5 text-sm text-ink hover:bg-brand-soft transition-colors"
                     >
-                        Italic
+                        View versions
                     </button>
-
                     <button
-                        onClick={() =>
-                            editor
-                                .chain()
-                                .focus()
-                                .toggleHeading({ level: 1 })
-                                .run()
-                        }
+                        onClick={() => { DeleteDoc(id); }}
+                        className="rounded-md border border-red-200 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
-                        H1
+                        Delete
                     </button>
-
                 </div>
-            )}
-
-            <button onClick={() => {
-                SendNewElements(id);
-            }}>
-                Save
-            </button>
-
-            <button onClick={() => {
-                navigate(`/version/${id}`);
-            }}>
-                View Versions
-            </button>
-
-            <button onClick={() => {
-                DeleteDoc(id);
-            }}>
-                Delete
-            </button>
-
-
-            <ul style={{ color: "black" }}>
-
-                {usersonline.map((users) => (
-
-                    <li key={users}>
-                        {users}
-                    </li>
-
-                ))}
-
-            </ul>
-
-
-            {typingUser && (
-                <p>
-                    {typingUser} is typing...
-                </p>
-            )}
-
-
-            <div>
-
-                <br />
-
-                <h1>SHARE</h1>
-
-                <form onSubmit={handleSubmit}>
-
-                    <input
-                        type="text"
-                        placeholder="email"
-                        value={email}
-                        onChange={handleInputChangeEmail}
-                        required
-                    />
-
-                    <select
-                        name="role"
-                        id="role"
-                        onChange={(e) => {
-                            setRole(e.target.value);
-                        }}
-                    >
-                        <option value="viewer">
-                            Viewer
-                        </option>
-
-                        <option value="editor">
-                            editor
-                        </option>
-
-                    </select>
-
-                    <button type="submit">
-                        Share
-                    </button>
-
-                </form>
-
             </div>
 
-        </>
+            <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8">
+                {/* Editor column */}
+                <div>
+                    {editor && (
+                        <div className="flex gap-1 mb-3 border border-line bg-surface rounded-md p-1 w-fit">
+                            <button
+                                className={`px-3 py-1.5 rounded text-sm ${editor.isActive('bold') ? 'bg-brand-soft text-brand font-semibold' : 'text-ink hover:bg-brand-soft'}`}
+                                onClick={() => editor.chain().focus().toggleBold().run()}
+                            >
+                                Bold
+                            </button>
+
+                            <button
+                                className={`px-3 py-1.5 rounded text-sm italic ${editor.isActive('italic') ? 'bg-brand-soft text-brand font-semibold' : 'text-ink hover:bg-brand-soft'}`}
+                                onClick={() => editor.chain().focus().toggleItalic().run()}
+                            >
+                                Italic
+                            </button>
+
+                            <button
+                                className="px-3 py-1.5 rounded text-sm text-ink hover:bg-brand-soft"
+                                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                            >
+                                H1
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="bg-surface border border-line rounded-lg min-h-[60vh] px-8 py-6 font-serif text-ink text-lg leading-relaxed [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:mb-3 focus-within:ring-2 focus-within:ring-brand">
+                        <EditorContent editor={editor} />
+                    </div>
+
+                    {typingUser && (
+                        <p className="mt-2 text-sm text-ink-muted italic">{typingUser} is typing...</p>
+                    )}
+                </div>
+
+                {/* Sidebar: presence + share */}
+                <div className="space-y-6">
+                    <div className="bg-surface border border-line rounded-lg p-4">
+                        <h2 className="text-sm font-medium text-ink-muted uppercase tracking-wide mb-3">Online now</h2>
+                        <ul className="space-y-1">
+                            {usersonline.map((users) => (
+                                <li key={users} className="flex items-center gap-2 text-sm text-ink">
+                                    <span className="w-2 h-2 rounded-full bg-brand" />
+                                    {users}
+                                </li>
+                            ))}
+                            {usersonline.length === 0 && (
+                                <li className="text-sm text-ink-muted">No one else here yet.</li>
+                            )}
+                        </ul>
+                    </div>
+
+                    <div className="bg-surface border border-line rounded-lg p-4">
+                        <h2 className="font-serif text-lg text-ink mb-3">Share</h2>
+                        <form onSubmit={handleSubmit} className="space-y-3">
+                            <input
+                                type="text"
+                                placeholder="email"
+                                value={email}
+                                onChange={handleInputChangeEmail}
+                                required
+                                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                            />
+
+                            <select
+                                name="role"
+                                id="role"
+                                onChange={(e) => { setRole(e.target.value); }}
+                                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                            >
+                                <option value="viewer">Viewer</option>
+                                <option value="editor">Editor</option>
+                            </select>
+
+                            <button
+                                type="submit"
+                                className="w-full rounded-md bg-brand text-white py-2 text-sm font-medium hover:bg-brand-hover transition-colors"
+                            >
+                                Share
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }

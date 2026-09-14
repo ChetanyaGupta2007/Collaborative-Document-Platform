@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './login.jsx'
 import { useNavigate,Link } from 'react-router-dom';
-
+const API_URL = import.meta.env.VITE_API_URL;
 export default function Register(){
     const navigate = useNavigate();
 //  const [count, setCount] = useState(0)
@@ -29,7 +29,7 @@ export default function Register(){
       // Handle form submission logic here
       console.log('Form submit initiated', { username, email, password });
       try {
-      const response = await fetch('http://localhost:4000/api/register', {
+      const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -58,19 +58,64 @@ export default function Register(){
 
 
   return (
-    <>
-      <div> <form onSubmit={handleSubmit}>
-        <input type = "text" placeholder = "Username" value={username} onChange={handleInputChangeUsername} required></input>
-        <input type = "text" placeholder = "Email" value={email} onChange={handleInputChangeEmail} required></input>
-        <input type = "text" placeholder = "Password" value={password} onChange={handleInputChangePassword} required></input>
-        <button type="submit">Submit</button>
-        </form>
-        </div>
-        <div>
-          <Link to="/login">Login</Link>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-paper px-4">
+      <div className="w-full max-w-sm bg-surface border border-line rounded-lg p-8 shadow-sm">
+        <h1 className="font-serif text-3xl text-ink mb-1">Create your account</h1>
+        <p className="text-sm text-ink-muted mb-6">Start writing and collaborating in seconds.</p>
 
-      
-    </>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="reg-username" className="block text-sm text-ink-muted">Username</label>
+            <input
+              id="reg-username"
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={handleInputChangeUsername}
+              required
+              className="w-full rounded-md border border-line bg-paper px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="reg-email" className="block text-sm text-ink-muted">Email</label>
+            <input
+              id="reg-email"
+              type="text"
+              placeholder="Email"
+              value={email}
+              onChange={handleInputChangeEmail}
+              required
+              className="w-full rounded-md border border-line bg-paper px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="reg-password" className="block text-sm text-ink-muted">Password</label>
+            <input
+              id="reg-password"
+              type="text"
+              placeholder="Password"
+              value={password}
+              onChange={handleInputChangePassword}
+              required
+              className="w-full rounded-md border border-line bg-paper px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full rounded-md bg-brand text-white py-2 font-medium hover:bg-brand-hover transition-colors"
+          >
+            Submit
+          </button>
+        </form>
+
+        <div className="mt-6 text-sm text-ink-muted">
+          Already have an account?{' '}
+          <Link to="/login" className="text-brand hover:text-brand-hover font-medium">Login</Link>
+        </div>
+      </div>
+    </div>
   )
 }
