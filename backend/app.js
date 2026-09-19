@@ -193,24 +193,42 @@ io.on('connection',(socket)=>{
 
     
     socket.on('yjs-update', (update) => {
-        const docId = socket.data.currentDocId;
-        if (!docId) {
-            console.error('No document ID found for socket');
-            return;
-        }
-        const documentRole = socket.data.documentRole;
-        if (documentRole !== 'editor' && documentRole !== 'owner') {
-            console.error('User does not have permission to edit the document');
-            return;
-        }
-        const ydoc = getDoc(docId);
-        if (!ydoc) {
-            console.error('No Yjs document found for ID:', docId);
-            return;
-        }
-        Y.applyUpdate(ydoc, update);
-        socket.to(docId).emit('yjs-update', update);
-        persistYjsUpdate(docId, update, ydoc);    })
+
+    console.log(
+        'YJS UPDATE DEBUG:',
+        'socketId =', socket.id,
+        'userId =', socket.data.userId,
+        'currentDocId =', socket.data.currentDocId,
+        'documentRole =', socket.data.documentRole
+    );
+
+    const docId = socket.data.currentDocId;
+
+    if (!docId) {
+        console.error('No document ID found for socket');
+        return;
+    }
+
+    const documentRole = socket.data.documentRole;
+
+    if (documentRole !== 'editor' && documentRole !== 'owner') {
+        console.error('User does not have permission to edit the document');
+        return;
+    }
+
+    const ydoc = getDoc(docId);
+
+    if (!ydoc) {
+        console.error('No Yjs document found for ID:', docId);
+        return;
+    }
+
+    Y.applyUpdate(ydoc, update);
+
+    socket.to(docId).emit('yjs-update', update);
+
+    persistYjsUpdate(docId, update, ydoc);
+});
     socket.on('disconnect', async () => {
     const docId = socket.data.currentDocId;
     await handleUserLeave(docId, socket, redisClient);
