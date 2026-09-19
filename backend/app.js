@@ -95,83 +95,91 @@ io.use((socket,next) =>{
     }
 })
 io.on('connection',(socket)=>{
-    socket.on('join_document' , async (data,callback)=>{
-        
-        
-    const allowed = await hasDocumentAccess(
-        socket.data.userId,
-        data.id,
-        
-    );
-
-    if (allowed=== null) {
-        callback({
-    ok: false,
-    error: "You do not have access to this document"
-});
-        return;
-    }   
-        let ydoc;
-        if (hasDoc(data.id)) {
-    ydoc = getDoc(data.id);
-} else {
-        const document = await Document.findById(data.id);
-        if (!document) {
-            callback({
-                ok: false,
-                error: "Document not found"
-            });
-            return;
-        }
-        // Reconstruct the Y.Doc from snapshot + persisted updates.
-        // Document existence/authorization is already handled above.
-        ydoc = await reconstructYDoc(
-            data.id,
-            document.content
-        );
+    socket.on('join_document', async (data, callback) => {
         try {
-            setDoc(data.id, ydoc);
-
-            startSnapshotTimer(
+            const allowed = await hasDocumentAccess(
+                socket.data.userId,
                 data.id,
-                ydoc
             );
-        } catch (err) {
-            const existingYDoc = getDoc(data.id);
 
-            if (!existingYDoc) {
-                throw err;
+            if (allowed === null) {
+                callback({
+                    ok: false,
+                    error: "You do not have access to this document"
+                });
+                return;
             }
 
-            ydoc = existingYDoc;
-        }       }
-        socket.data.documentRole = allowed;
-        socket.data.currentDocId = data.id;
-        socket.join(data.id);
-        const bootstrapUpdate = Y.encodeStateAsUpdate(ydoc);
-        callback({
-            ok: true,
-            data: bootstrapUpdate
-        });
+            let ydoc;
+            if (hasDoc(data.id)) {
+                ydoc = getDoc(data.id);
+            } else {
+                const document = await Document.findById(data.id);
+                if (!document) {
+                    callback({
+                        ok: false,
+                        error: "Document not found"
+                    });
+                    return;
+                }
+                // Reconstruct the Y.Doc from snapshot + persisted updates.
+                // Document existence/authorization is already handled above.
+                ydoc = await reconstructYDoc(
+                    data.id,
+                    document.content
+                );
+                try {
+                    setDoc(data.id, ydoc);
 
-        
-        console.log(`socket ${socket.id} joined document ${data.id}`);
-        const number = io.sockets.adapter.rooms.get(data.id)
-        console.log(`${number?.size} people`);
-        const result = await UserData.findById(socket.data.userId);
-        const users = await redisClient.hGetAll(`documentPresence:${data.id}`);
-        socket.data.username = result.username;
-        
+                    startSnapshotTimer(
+                        data.id,
+                        ydoc
+                    );
+                } catch (err) {
+                    const existingYDoc = getDoc(data.id);
 
-    await redisClient.hSet(
-    `documentPresence:${data.id}`,
-    socket.id,
-    result.username
-);
-   
-        socket.to(data.id).emit('user_joined', { username: result.username });
-        socket.emit('current_viewers', {usernames : Object.values(users)});
-        })
+                    if (!existingYDoc) {
+                        throw err;
+                    }
+
+                    ydoc = existingYDoc;
+                }
+            }
+
+            socket.data.documentRole = allowed;
+            socket.data.currentDocId = data.id;
+            socket.join(data.id);
+            const bootstrapUpdate = Y.encodeStateAsUpdate(ydoc);
+            callback({
+                ok: true,
+                data: bootstrapUpdate
+            });
+
+            console.log(`socket ${socket.id} joined document ${data.id}`);
+            const number = io.sockets.adapter.rooms.get(data.id)
+            console.log(`${number?.size} people`);
+            const result = await UserData.findById(socket.data.userId);
+            const users = await redisClient.hGetAll(`documentPresence:${data.id}`);
+            socket.data.username = result.username;
+
+
+            await redisClient.hSet(
+                `documentPresence:${data.id}`,
+                socket.id,
+                result.username
+            );
+
+            socket.to(data.id).emit('user_joined', { username: result.username });
+            socket.emit('current_viewers', { usernames: Object.values(users) });
+
+        } catch (err) {
+            console.error('join_document failed:', err);
+            callback({
+                ok: false,
+                error: "Failed to join document"
+            });
+        }
+    })
         socket.on('typing', (data) => {
     if (!socket.rooms.has(data.id)) {
         return;

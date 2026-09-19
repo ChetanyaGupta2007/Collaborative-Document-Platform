@@ -36,7 +36,16 @@ export default function Dashboard() {
     }, [])
 
     async function createDoc() {
-        const content = document.getElementById("content").value;
+        const text = document.getElementById("content").value;
+        const content = {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    content: text ? [{ type: 'text', text }] : []
+                }
+            ]
+        };
         const response = await fetchwithAuth(`${API_URL}/api/document`, {
             method: 'POST',
             headers: {
