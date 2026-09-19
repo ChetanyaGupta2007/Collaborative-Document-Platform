@@ -8,6 +8,8 @@ export default function Register(){
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState("");
+
 
     const handleInputChangeUsername = (e) => {
       setUsername(e.target.value);
@@ -49,6 +51,8 @@ export default function Register(){
       } else {
         // Registration failed, handle error
         console.error('Registration failed:', serverResponse.message);
+        setError(serverResponse.message);
+        return;
       }}
       catch (error) {
         console.error('Error:', error);
@@ -94,7 +98,7 @@ export default function Register(){
             <label htmlFor="reg-password" className="block text-sm text-ink-muted">Password</label>
             <input
               id="reg-password"
-              type="text"
+              type="password"
               placeholder="Password"
               value={password}
               onChange={handleInputChangePassword}
@@ -109,6 +113,7 @@ export default function Register(){
           >
             Submit
           </button>
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
 
         <div className="mt-6 text-sm text-ink-muted">

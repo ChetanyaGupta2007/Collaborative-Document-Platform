@@ -10,6 +10,7 @@ export default function Login(){
         const [email, setEmail] = useState('');
         const [password, setPassword] = useState('');
         const navigate = useNavigate();
+        const [error, setError] = useState("");
 
         useEffect(() => {
             async function checkSession() {
@@ -50,8 +51,11 @@ export default function Login(){
                     localStorage.setItem('existingAccessToken', serverResponse.accessToken);
                     localStorage.setItem('existingRefreshToken', serverResponse.refreshToken);
                     navigate('/dashboard')
+                }else {
+                    console.error('Login failed:', serverResponse.message);
+                    setError(serverResponse.message);
+                    return ;
                 }
-                console.log(serverResponse);
             }
 
     return (
@@ -91,7 +95,7 @@ export default function Login(){
               <label htmlFor="login-password" className="block text-sm text-ink-muted">Password</label>
               <input
                 id="login-password"
-                type="text"
+                type="password"
                 placeholder="Password"
                 value={password}
                 onChange={handleInputChangePassword}
@@ -99,6 +103,8 @@ export default function Login(){
                 className="w-full rounded-md border border-line bg-paper px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
               />
             </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"

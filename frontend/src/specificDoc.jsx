@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react';
 
 import * as Y from 'yjs';
@@ -50,6 +49,8 @@ export default function SpecificDoc() {
 
     const [role, setRole] = useState("");
 
+    const [shareStatus, setShareStatus] = useState("");
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -66,8 +67,14 @@ export default function SpecificDoc() {
             }
         );
 
+        const serverResponse = await responseAccess.json().catch(() => null);
+
         if (responseAccess.ok) {
             console.log("Shared To another user");
+            setShareStatus(`Shared with ${email}`);
+            setEmail('');
+        } else {
+            setShareStatus(serverResponse?.message || "Failed to share document");
         }
     };
 
@@ -306,8 +313,37 @@ export default function SpecificDoc() {
 
             console.log("Document Saved");
 
+            await SaveVersion(id);
+
         }
     }
+
+
+    // SAVE VERSION (checkpoint snapshot)
+    async function SaveVersion(id) {
+
+        const content = editor.getJSON();
+
+        const response = await fetchwithAuth(
+            `${API_URL}/api/document/${id}/version`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content
+                })
+            }
+        );
+
+        if (response.ok) {
+
+            console.log("Version Saved");
+
+        }
+    }
+
 
 
     // DELETE DOCUMENT
@@ -355,6 +391,12 @@ export default function SpecificDoc() {
                         className="rounded-md bg-brand text-white px-4 py-1.5 text-sm font-medium hover:bg-brand-hover transition-colors"
                     >
                         Save
+                    </button>
+                    <button
+                        onClick={() => { SaveVersion(id); }}
+                        className="rounded-md border border-line px-4 py-1.5 text-sm text-ink hover:bg-brand-soft transition-colors"
+                    >
+                        Save Version
                     </button>
                     <button
                         onClick={() => { navigate(`/version/${id}`); }}
@@ -453,6 +495,10 @@ export default function SpecificDoc() {
                             >
                                 Share
                             </button>
+
+                            {shareStatus && (
+                                <p className="text-sm text-ink-muted">{shareStatus}</p>
+                            )}
                         </form>
                     </div>
                 </div>
