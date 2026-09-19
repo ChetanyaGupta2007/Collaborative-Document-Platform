@@ -202,6 +202,7 @@ export default function SpecificDoc() {
         ydoc.on("update", (update, origin) => {
     // send update through Socket.IO
     if (origin === INCOMING_UPDATE) return; 
+       console.log('sending update:', update.constructor.name, update.byteLength);
     socketRef.current?.emit('yjs-update', update); 
 });
 
