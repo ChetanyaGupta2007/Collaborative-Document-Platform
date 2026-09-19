@@ -144,21 +144,24 @@ export default function SpecificDoc() {
 
         // JOIN DOCUMENT
         socket.emit('join_document', { id },(response)=> {
-            if(!response.ok){
-                console.log(response.error);
-                return navigate('/dashboard');
-            }
-            isRemoteTransaction.current = true;
+    if(!response.ok){
+        console.log(response.error);
+        return navigate('/dashboard');
+    }
+    console.log('bootstrap ack received:', response.data?.constructor?.name, response.data?.length ?? response.data?.byteLength);
 
-            Y.applyUpdate(
-                ydoc,
-                response.data,
-                INCOMING_UPDATE
-            );
-
-            isRemoteTransaction.current = false;
-        });
-
+    isRemoteTransaction.current = true;
+    try {
+        Y.applyUpdate(
+            ydoc,
+            response.data,
+            INCOMING_UPDATE
+        );
+    } catch (err) {
+        console.error('Y.applyUpdate threw:', err);
+    }
+    isRemoteTransaction.current = false;
+});
 
         // USER JOINED
         socket.on('user_joined', (data) => {
