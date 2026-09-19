@@ -116,11 +116,11 @@ export default function SpecificDoc() {
         
 
         const socket = io(API_URL, {
-            auth: {
-                token: accessToken
-            }
-        });
-
+    auth: {
+        token: accessToken
+    },
+    transports: ['websocket']
+});
         socketRef.current = socket;
 
 
