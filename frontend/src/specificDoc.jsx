@@ -116,11 +116,11 @@ export default function SpecificDoc() {
         
 
         const socket = io(API_URL, {
-    auth: {
-        token: accessToken
-    },
-    transports: ['websocket']
-});
+            auth: {
+                token: accessToken
+            }
+        });
+
         socketRef.current = socket;
 
 
@@ -144,24 +144,26 @@ export default function SpecificDoc() {
 
         // JOIN DOCUMENT
         socket.emit('join_document', { id },(response)=> {
-    if(!response.ok){
-        console.log(response.error);
-        return navigate('/dashboard');
-    }
-    console.log('bootstrap ack received:', response.data?.constructor?.name, response.data?.length ?? response.data?.byteLength);
+            if(!response.ok){
+                console.log(response.error);
+                return navigate('/dashboard');
+            }
+            isRemoteTransaction.current = true;
 
-    isRemoteTransaction.current = true;
-    try {
-        Y.applyUpdate(
-            ydoc,
-            response.data,
-            INCOMING_UPDATE
-        );
-    } catch (err) {
-        console.error('Y.applyUpdate threw:', err);
-    }
-    isRemoteTransaction.current = false;
-});
+            // CONFIRMED FIX: response.data arrives as a raw ArrayBuffer
+            // (that's what your own log showed: "ArrayBuffer 508").
+            // Y.applyUpdate's internal decoder needs a Uint8Array, not
+            // an ArrayBuffer directly — this was the traced cause of
+            // the "Unexpected end of array" crash.
+            Y.applyUpdate(
+                ydoc,
+                new Uint8Array(response.data),
+                INCOMING_UPDATE
+            );
+
+            isRemoteTransaction.current = false;
+        });
+
 
         // USER JOINED
         socket.on('user_joined', (data) => {
@@ -198,14 +200,18 @@ export default function SpecificDoc() {
 
         socket.on('yjs-update', (update) => {
             // Handle yjs-update event
+            // NOT YET CONFIRMED the same way line ~155 was — you never
+            // ran the console.log('incoming update:', update?.constructor?.name)
+            // check I asked for. Applying the same conversion defensively
+            // since it's the identical Socket.IO-binary-payload shape, but
+            // verify update's actual constructor before trusting this.
             isRemoteTransaction.current = true ; 
-            Y.applyUpdate(ydoc, update, INCOMING_UPDATE) ; 
+            Y.applyUpdate(ydoc, new Uint8Array(update), INCOMING_UPDATE) ; 
             isRemoteTransaction.current = false;
         });
         ydoc.on("update", (update, origin) => {
     // send update through Socket.IO
     if (origin === INCOMING_UPDATE) return; 
-       console.log('sending update:', update.constructor.name, update.byteLength);
     socketRef.current?.emit('yjs-update', update); 
 });
 
