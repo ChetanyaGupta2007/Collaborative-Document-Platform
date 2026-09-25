@@ -36,7 +36,7 @@ async function checkData(req, res) {
         }
         const id = verifiedUser._id;
         console.log("before access token and refreshtoken")
-        const accessToken = jwt.sign({ id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+        const accessToken = jwt.sign({ id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '6h' });
         const refreshToken = jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
         await UserData.updateOne({ _id: verifiedUser._id }, { $set: { RefreshToken: refreshToken } });
         console.log("userdata refershtoken sent")
